@@ -32,7 +32,8 @@ import {
   Save,
   FolderOpen,
   PlusCircle,
-  Loader2
+  Loader2,
+  Search
 } from 'lucide-react';
 import { LedgerRow, GrandTotals } from './types';
 
@@ -153,6 +154,7 @@ export default function App() {
   const [currentSheetId, setCurrentSheetId] = useState<string | null>(null);
   const [currentSheetName, setCurrentSheetName] = useState<string>("New Gold Ledger");
   const [savedSheets, setSavedSheets] = useState<any[]>([]);
+  const [sheetsSearchQuery, setSheetsSearchQuery] = useState<string>("");
   const [showSheetsDropdown, setShowSheetsDropdown] = useState<boolean>(false);
   const [savingSheet, setSavingSheet] = useState<boolean>(false);
   const [loadingSheets, setLoadingSheets] = useState<boolean>(false);
@@ -193,6 +195,13 @@ export default function App() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
   }, []);
+
+  // Reset sheets search query when sheets dropdown opens/closes
+  React.useEffect(() => {
+    if (!showSheetsDropdown) {
+      setSheetsSearchQuery("");
+    }
+  }, [showSheetsDropdown]);
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
@@ -909,6 +918,29 @@ export default function App() {
                     <div>
                       <span className="block text-[9px] text-slate-400 uppercase tracking-wider font-semibold mb-2">Saved Databases on Cloud</span>
                       
+                      {savedSheets.length > 0 && (
+                        <div className="relative mb-2.5">
+                          <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
+                          <input
+                            type="text"
+                            placeholder="Search sheets by name..."
+                            value={sheetsSearchQuery}
+                            onChange={(e) => setSheetsSearchQuery(e.target.value)}
+                            className="w-full pl-8 pr-7 py-1 text-xs border border-slate-250 rounded bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-sans"
+                            id="sheet-search-input"
+                          />
+                          {sheetsSearchQuery && (
+                            <button
+                              onClick={() => setSheetsSearchQuery('')}
+                              className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 font-bold text-[10px] w-4 h-4 bg-slate-100 rounded-full flex items-center justify-center transition cursor-pointer"
+                              title="Clear search"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      )}
+
                       {loadingSheets ? (
                         <div className="py-4 text-center text-slate-400 flex items-center justify-center gap-1.5">
                           <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
@@ -918,43 +950,57 @@ export default function App() {
                         <div className="py-5 text-center text-slate-400 text-xs italic bg-slate-50 rounded border border-dashed border-slate-200">
                           No sheets saved on backend yet.
                         </div>
-                      ) : (
-                        <div className="max-h-56 overflow-y-auto space-y-1.5 pr-0.5" style={{ scrollbarWidth: 'thin' }}>
-                          {savedSheets.map((s) => {
-                            const isActive = currentSheetId === s.id;
-                            const savedDate = new Date(s.updatedAt).toLocaleDateString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            });
+                      ) : (() => {
+                        const filteredSheets = savedSheets.filter((s) =>
+                          (s.name || "").toLowerCase().includes(sheetsSearchQuery.toLowerCase())
+                        );
 
-                            return (
-                              <div
-                                key={s.id}
-                                onClick={() => handleLoadSheet(s.id)}
-                                className={`flex items-center justify-between p-2 rounded-lg border text-left transition duration-150 group cursor-pointer ${
-                                  isActive
-                                    ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-semibold'
-                                    : 'border-slate-100 hover:bg-slate-50'
-                                }`}
-                              >
-                                <div className="truncate flex-grow mr-2">
-                                  <span className="block truncate text-[11px] leading-tight text-slate-800 font-semibold">{s.name}</span>
-                                  <span className="block text-[9px] text-slate-400 font-medium font-mono leading-none mt-0.5">{savedDate} • {s.rowCount} rows</span>
-                                </div>
-                                <button
-                                  onClick={(e) => handleDeleteSavedSheet(s.id, e)}
-                                  className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 rounded transition duration-150 shrink-0 cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                  title="Delete Sheet Permanently"
+                        if (filteredSheets.length === 0) {
+                          return (
+                            <div className="py-4 text-center text-slate-400 text-xs italic bg-slate-50 rounded border border-dashed border-slate-200">
+                              No matching sheets found.
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="max-h-56 overflow-y-auto space-y-1.5 pr-0.5" style={{ scrollbarWidth: 'thin' }}>
+                            {filteredSheets.map((s) => {
+                              const isActive = currentSheetId === s.id;
+                              const savedDate = new Date(s.updatedAt).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              });
+
+                              return (
+                                <div
+                                  key={s.id}
+                                  onClick={() => handleLoadSheet(s.id)}
+                                  className={`flex items-center justify-between p-2 rounded-lg border text-left transition duration-150 group cursor-pointer ${
+                                    isActive
+                                      ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-semibold'
+                                      : 'border-slate-100 hover:bg-slate-50'
+                                  }`}
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                                  <div className="truncate flex-grow mr-2">
+                                    <span className="block truncate text-[11px] leading-tight text-slate-800 font-semibold">{s.name}</span>
+                                    <span className="block text-[9px] text-slate-400 font-medium font-mono leading-none mt-0.5">{savedDate} • {s.rowCount} rows</span>
+                                  </div>
+                                  <button
+                                    onClick={(e) => handleDeleteSavedSheet(s.id, e)}
+                                    className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 rounded transition duration-150 shrink-0 cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                    title="Delete Sheet Permanently"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </motion.div>
                 )}
