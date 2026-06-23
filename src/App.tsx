@@ -323,8 +323,15 @@ export default function App() {
       window.getComputedStyle = function (elt, pseudoElt) {
         const styles = originalGetComputedStyle(elt, pseudoElt);
         return new Proxy(styles, {
-          get(target, prop, receiver) {
-            const val = Reflect.get(target, prop, receiver);
+          get(target, prop) {
+            let val;
+            try {
+              // Access property with target context to prevent Illegal Invocation crash on native objects
+              val = target[prop as any];
+            } catch (e) {
+              val = Reflect.get(target, prop, target);
+            }
+
             if (typeof val === 'string' && val.includes('oklch')) {
               return oklchToRgb(val);
             }
