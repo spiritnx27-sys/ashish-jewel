@@ -1,0 +1,6 @@
+{
+  "name": "Jewelry Ledger",
+  "description": "An Excel-style jewelry transaction ledger with dual weight and percent calculations, manual rate logging, and on-demand summary generation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
